@@ -174,7 +174,12 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <div id="ue-strafen"></div>
     </div>
     <div class="card">
-      <h2>Offene Beträge</h2>
+      <h2>Offene Beträge – Spieltag <span id="ob-st-label"></span></h2>
+      <div class="muted" style="margin-bottom:6px">Betrag je Spieler wird automatisch aus den Fehltipps berechnet. Zum Umschalten auf den Betrag tippen.</div>
+      <div id="ob-auto"></div>
+    </div>
+    <div class="card">
+      <h2>Weitere Beträge</h2>
       <div id="offenlist"></div>
       <div class="row">
         <select id="o-name" class="grow"></select>
@@ -271,7 +276,11 @@ function load(){
   if(!d) d = JSON.parse(JSON.stringify(DEFAULT_DATA));
   if(d.BackColorHex === undefined) d.BackColorHex = "";
   if(d.LogoDataUrl === undefined) d.LogoDataUrl = "";
-  for(var i=0;i<d.Spieler.length;i++){ if(d.Spieler[i].KickName === undefined) d.Spieler[i].KickName = ""; }
+  for(var i=0;i<d.Spieler.length;i++){
+    if(d.Spieler[i].KickName === undefined) d.Spieler[i].KickName = "";
+    if(!d.Spieler[i].Bezahlt) d.Spieler[i].Bezahlt = [];
+    while(d.Spieler[i].Bezahlt.length < SPIELTAGE) d.Spieler[i].Bezahlt.push(false);
+  }
   return d;
 }
 function save(){ localStorage.setItem('bt_data', JSON.stringify(D)); }
@@ -430,6 +439,24 @@ function renderUeSt(){
   }
   if(!D.Spieler.length) h+='<tr><td colspan="3" class="muted">Keine Spieler vorhanden.</td></tr>';
   document.getElementById('ue-sttable').innerHTML=h;
+
+  var lbl=document.getElementById('ob-st-label'); if(lbl) lbl.textContent=ue_st;
+  var ob='';
+  for(var p2=0;p2<D.Spieler.length;p2++){
+    var sp2=D.Spieler[p2];
+    var f2=sp2.Tipps[ue_st-1]||0;
+    var betrag=f2*sp2.Satz;
+    var bezahlt=!!(sp2.Bezahlt && sp2.Bezahlt[ue_st-1]);
+    ob+='<div class="row"><div class="grow">'+esc(sp2.Name)+'</div>'
+      +'<span class="pill '+(bezahlt?'g':'r')+'" onclick="obToggle('+p2+')">'+eur(betrag)+' · '+(bezahlt?'bezahlt':'offen')+'</span></div>';
+  }
+  if(!D.Spieler.length) ob='<div class="muted">Keine Spieler vorhanden.</div>';
+  var obEl=document.getElementById('ob-auto'); if(obEl) obEl.innerHTML=ob;
+}
+function obToggle(p){
+  if(!D.Spieler[p].Bezahlt) D.Spieler[p].Bezahlt=newBoolArr();
+  D.Spieler[p].Bezahlt[ue_st-1]=!D.Spieler[p].Bezahlt[ue_st-1];
+  save(); renderUeSt();
 }
 
 function buildPdfReportHtml(){
@@ -560,9 +587,10 @@ function pDel(i){
   if(!confirm('Spieler "'+D.Spieler[i].Name+'" wirklich entfernen?')) return;
   D.Spieler.splice(i,1); save(); renderAll();
 }
+function newBoolArr(){ var a=[]; for(var i=0;i<SPIELTAGE;i++) a.push(false); return a; }
 function playerAdd(){
   var t=[]; for(var i=0;i<SPIELTAGE;i++) t.push(0);
-  D.Spieler.push({Name:'Neuer Spieler', Satz:0.2, Tipps:t, KickName:''});
+  D.Spieler.push({Name:'Neuer Spieler', Satz:0.2, Tipps:t, KickName:'', Bezahlt:newBoolArr()});
   save(); renderAll();
 }
 function exportJson(){
@@ -852,7 +880,7 @@ async function syncKicktipp(){
         if(assign[kk2] !== 'new') continue;
         var arr3 = data[kk2], tipps = [];
         for(var i6 = 0; i6 < SPIELTAGE; i6++) tipps.push(arr3[i6] >= 0 ? arr3[i6] : 0);
-        D.Spieler.push({Name:kk2, Satz:0.2, Tipps:tipps, KickName:kk2});
+        D.Spieler.push({Name:kk2, Satz:0.2, Tipps:tipps, KickName:kk2, Bezahlt:newBoolArr()});
         updated++;
       }
     }
@@ -947,7 +975,7 @@ async function syncKicktippPlayers(){
     for(var kk2 in assign){
       if(assign[kk2] !== 'new') continue;
       var t = []; for(var i2 = 0; i2 < SPIELTAGE; i2++) t.push(0);
-      D.Spieler.push({Name:kk2, Satz:0.2, Tipps:t, KickName:kk2});
+      D.Spieler.push({Name:kk2, Satz:0.2, Tipps:t, KickName:kk2, Bezahlt:newBoolArr()});
       neu++;
     }
     save();
