@@ -164,7 +164,7 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <h2>Offene Beträge</h2>
       <div id="offenlist"></div>
       <div class="row">
-        <input class="grow" id="o-name" placeholder="Name">
+        <select id="o-name" class="grow"></select>
         <input class="small" id="o-betrag" placeholder="0,00" inputmode="decimal"> €
       </div>
       <button class="btn block gray" onclick="offenAdd()">Hinzufügen</button>
@@ -372,13 +372,18 @@ function renderUeber(){
   }
   if(!o) o='<div class="muted">Keine offenen Beträge.</div>';
   document.getElementById('offenlist').innerHTML=o;
+  var oSel=document.getElementById('o-name'); oSel.innerHTML='';
+  for(var p2=0;p2<D.Spieler.length;p2++){
+    var opt=document.createElement('option'); opt.value=D.Spieler[p2].Name; opt.text=D.Spieler[p2].Name; oSel.add(opt);
+  }
+  if(!D.Spieler.length){ var opt0=document.createElement('option'); opt0.value=''; opt0.text='Kein Spieler vorhanden'; oSel.add(opt0); }
 }
 function offenAdd(){
-  var n=document.getElementById('o-name').value.trim();
+  var n=document.getElementById('o-name').value;
   var b=parseNum(document.getElementById('o-betrag').value);
   if(!n) return;
   D.Offene.push({Name:n, Betrag:b}); save();
-  document.getElementById('o-name').value=''; document.getElementById('o-betrag').value='';
+  document.getElementById('o-betrag').value='';
   renderUeber();
 }
 function offenDel(i){ D.Offene.splice(i,1); save(); renderUeber(); }
