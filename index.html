@@ -180,7 +180,7 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <h2>Einstellungen</h2>
       <div class="row">
         <div class="grow">Darkmode</div>
-        <span class="switch"><input type="checkbox" id="darkmode" onchange="toggleDark()"><span class="slider"></span></span>
+        <label class="switch"><input type="checkbox" id="darkmode" onchange="toggleDark()"><span class="slider"></span></label>
       </div>
       <div class="row">
         <div class="grow">Hintergrundfarbe</div>
@@ -296,7 +296,8 @@ function renderTipps(){
     var sp=D.Spieler[p];
     h+='<div class="row"><div class="grow">'+esc(sp.Name)+'</div>'
       +'<input class="num" inputmode="numeric" value="'+(sp.Tipps[st-1]||0)+'" onchange="tippInput('+p+',this)">'
-      +'<div class="muted" style="width:66px" class="right">'+eur((sp.Tipps[st-1]||0)*sp.Satz)+'</div></div>';
+      +'<div class="muted" style="width:66px" class="right">'+eur((sp.Tipps[st-1]||0)*sp.Satz)+'</div>'
+      +'<button class="x" onclick="pDel('+p+')" title="Spieler löschen">✕</button></div>';
   }
   if(!D.Spieler.length) h='<div class="muted">Noch keine Spieler – unter „Mehr" hinzufügen.</div>';
   document.getElementById('stlist').innerHTML=h;
