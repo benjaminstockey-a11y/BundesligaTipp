@@ -170,6 +170,10 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <table id="ue-sttable"></table>
     </div>
     <div class="card">
+      <h2>Strafgebühren</h2>
+      <div id="ue-strafen"></div>
+    </div>
+    <div class="card">
       <h2>Offene Beträge</h2>
       <div id="offenlist"></div>
       <div class="row">
@@ -335,8 +339,8 @@ function strafeAdd(){
   document.getElementById('s-sp').value='';
   renderStrafen();
 }
-function strafeDel(i){ D.Strafen.splice(i,1); save(); renderStrafen(); }
-function strafeToggle(i){ D.Strafen[i].Bezahlt=!D.Strafen[i].Bezahlt; save(); renderStrafen(); }
+function strafeDel(i){ D.Strafen.splice(i,1); save(); renderStrafen(); renderUeber(); }
+function strafeToggle(i){ D.Strafen[i].Bezahlt=!D.Strafen[i].Bezahlt; save(); renderStrafen(); renderUeber(); }
 function renderStrafen(){
   var h='';
   for(var i=0;i<D.Strafen.length;i++){
@@ -375,6 +379,15 @@ function renderUeber(){
   document.getElementById('uebertable').innerHTML=h;
   applyLogo();
   renderUeSt();
+  var st2='';
+  for(var i2=0;i2<D.Strafen.length;i2++){
+    var s2=D.Strafen[i2];
+    st2+='<div class="row"><div class="grow">Spieltag '+esc(s2.Spieltag)+' · <b>'+esc(s2.Name)+'</b> · '+eur(s2.Betrag)+'</div>'
+      +'<span class="pill '+(s2.Bezahlt?'g':'r')+'" onclick="strafeToggle('+i2+')">'+(s2.Bezahlt?'bezahlt':'offen')+'</span>'
+      +'<button class="x" onclick="strafeDel('+i2+')">✕</button></div>';
+  }
+  if(!st2) st2='<div class="muted">Noch keine Strafgebühren.</div>';
+  document.getElementById('ue-strafen').innerHTML=st2;
   var o='';
   for(var i=0;i<D.Offene.length;i++){
     o+='<div class="row"><div class="grow">'+esc(D.Offene[i].Name)+'</div>'
