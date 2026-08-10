@@ -247,6 +247,97 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       auf dem Handy gespeichert.
     </div>
   </div>
+
+  <!-- ============ TAB HILFE ============ -->
+  <div id="tab-hilfe" class="hidden">
+    <div class="card">
+      <h2>⚽ Tab „Tipps"</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        Oben Spieltag mit ‹ › oder der Auswahl wechseln. Für jeden Spieler direkt
+        Name und Anzahl der Fehltipps (verlorene Tipps) an diesem Spieltag eintippen –
+        wird sofort gespeichert. Mit „✕" neben einem Spieler löschen, mit „+ Spieler hinzufügen"
+        unten (Tab „Mehr") einen neuen anlegen.<br><br>
+        <b>Mit Kicktipp synchronisieren</b>: holt automatisch alle Ergebnisse und Fehltipps
+        von eurer Kicktipp-Seite und trägt sie ein. Unbekannte Kicktipp-Namen müsst ihr
+        einmalig eurem Spieler zuordnen (danach merkt sich die App das).<br>
+        <b>Spieler von Kicktipp holen</b>: schneller, holt nur die Tipper-Namen (keine Ergebnisse).
+      </div>
+    </div>
+    <div class="card">
+      <h2>💶 Tab „Strafgebühren"</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        Neue Strafe unten eintragen (Spieltag, Name, Betrag auswählen) und auf
+        „Strafe hinzufügen" tippen. Mit Antippen des „offen"/„bezahlt"-Kästchens
+        den Status umschalten, mit „✕" löschen.
+      </div>
+    </div>
+    <div class="card">
+      <h2>📊 Tab „Übersicht"</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        Ganz oben die <b>Gesamteinnahme im Pott</b> (alle Fehltipp-Verluste + bezahlte Strafen).<br><br>
+        <b>Spieler-Tabelle</b>: Fehltipps und Verlust über die ganze Saison pro Spieler.<br><br>
+        <b>Verlust pro Spieltag</b>: mit ‹ › oder Auswahl einen einzelnen Spieltag ansehen –
+        zeigt, wer an genau diesem Tag wie viel verloren hat.<br><br>
+        <b>Strafgebühren</b>: dieselbe Liste wie im Strafen-Tab, hier ebenfalls bedienbar.<br><br>
+        <b>Offene Beträge – Spieltag X</b>: automatisch berechneter Betrag je Spieler für den oben
+        gewählten Spieltag. Auf den Betrag tippen schaltet zwischen „offen" (rot) und
+        „bezahlt" (grün) um.<br><br>
+        <b>Weitere Beträge (gesamt offen)</b>: rechnet automatisch alle offenen (nicht als
+        „bezahlt" markierten) Fehltipp-Verluste und Strafen pro Spieler zusammen. Mit
+        „Sonstigen Betrag hinzufügen" könnt ihr zusätzliche Posten eintragen, die dort mitgezählt
+        werden (unten in der Liste „Sonstige Beträge" auch einzeln löschbar).<br><br>
+        <b>Übersicht als PDF → WhatsApp</b>: erstellt ein PDF mit dem aktuellen Stand und
+        öffnet WhatsApp zum Versenden.
+      </div>
+    </div>
+    <div class="card">
+      <h2>⚙️ Tab „Mehr"</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        <b>Darkmode</b>: dunkle Oberfläche ein-/ausschalten.<br>
+        <b>Hintergrundfarbe</b>: eigene Farbe wählen oder zurücksetzen.<br>
+        <b>Vereinslogo (Wasserzeichen)</b>: Bild auswählen, das blass hinter der
+        Spieler-Tabelle in der Übersicht angezeigt wird (nicht zu verwechseln mit dem
+        App-Logo oben in der Kopfzeile – dafür siehe unten „Logo &amp; Kopfzeile ändern").<br>
+        <b>Spieler verwalten</b>: Namen, €-Satz pro Fehltipp und (optional) den Kicktipp-Namen
+        jedes Spielers bearbeiten, „+ Spieler hinzufügen" für neue Spieler.<br><br>
+        <b>Mit PC-Programm synchronisieren</b>: gleicht die Daten automatisch mit dem
+        PC-Programm ab (siehe eigener Abschnitt unten). <b>Daten exportieren/importieren</b>:
+        alternativ manuell über die Datei „tippdaten.json".
+      </div>
+    </div>
+    <div class="card">
+      <h2>🔄 Automatischer Abgleich mit dem PC-Programm</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        Tab „Mehr" → „Mit PC-Programm synchronisieren" antippen. Die App vergleicht,
+        welcher Stand (App oder PC) neuer ist, und übernimmt automatisch den aktuelleren –
+        ohne dass ihr eine Datei hin- und herschicken müsst.<br><br>
+        Zum <b>Empfangen</b> vom PC ist nichts weiter nötig. Zum <b>Senden</b> an den PC
+        braucht die App einmalig einen GitHub-Token, den ihr in das Feld „GitHub-Token"
+        direkt über dem Sync-Knopf eintragt (wie man den Token erstellt, weiß, wer die
+        Synchronisierung eingerichtet hat).
+      </div>
+    </div>
+    <div class="card">
+      <h2>🖼️ Logo &amp; Kopfzeile ändern</h2>
+      <div class="muted" style="font-size:13.5px;line-height:1.5">
+        <b>2 Sekunden</b> auf das runde Logo oben links in der Kopfzeile drücken –
+        es öffnet sich ein Menü mit:<br><br>
+        • <b>App-Logo</b>: aktuelles Logo als Bilddatei sichern („Speichern") oder ein
+        neues Bild auswählen („Ändern").<br>
+        • <b>Banner-Farbe</b>: Farbe der grünen Kopfzeile ändern oder zurücksetzen.<br>
+        • <b>Kopfzeilen-Text</b>: Titel (z.B. „Bundesliga Tipps"), Vereinsname und Saison
+        frei anpassen.<br>
+        • <b>Erweitert: Synchronisierung</b> (ausklappbar): die Kicktipp-Seite ändern
+        (z.B. bei einer neuen Saison-Runde – wird automatisch mit dem PC-Programm
+        mitsynchronisiert) sowie die verknüpfte GitHub-Seite für die Datensynchronisierung
+        (nur nötig, falls ihr auf ein anderes Repository umzieht).
+      </div>
+    </div>
+    <div class="card muted" style="font-size:12.5px">
+      Alle Änderungen werden automatisch auf dem Handy gespeichert. Bei Fragen oder
+      Problemen: einfach nochmal hier in der Hilfe nachlesen.
+    </div>
+  </div>
 </main>
 
 <nav class="tabbar">
@@ -254,6 +345,7 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
   <button id="tb-strafen" onclick="showTab('strafen')"><span class="ic">💶</span>Strafen</button>
   <button id="tb-ueber" onclick="showTab('ueber')"><span class="ic">📊</span>Übersicht</button>
   <button id="tb-mehr" onclick="showTab('mehr')"><span class="ic">⚙️</span>Mehr</button>
+  <button id="tb-hilfe" onclick="showTab('hilfe')"><span class="ic">❓</span>Hilfe</button>
 </nav>
 
 <div id="modal-overlay" class="modal-overlay hidden">
@@ -346,7 +438,7 @@ function verlust(p){ return fehl(p) * p.Satz; }
 
 /* ---------- Tabs ---------- */
 function showTab(name){
-  var tabs = ['tipps','strafen','ueber','mehr'];
+  var tabs = ['tipps','strafen','ueber','mehr','hilfe'];
   for(var i=0;i<tabs.length;i++){
     document.getElementById('tab-'+tabs[i]).classList.toggle('hidden', tabs[i]!==name);
     document.getElementById('tb-'+tabs[i]).classList.toggle('on', tabs[i]===name);
