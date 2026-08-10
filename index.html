@@ -747,7 +747,12 @@ async function syncPc(){
       throw new Error('Server antwortete mit ' + res.status);
     }
 
-    save(); // aktuellen Stand + LastModified sichern
+    // WICHTIG: hier bewusst NICHT save() aufrufen - das wuerde D.LastModified
+    // allein durch das Antippen von "Synchronisieren" auf "jetzt" setzen und
+    // die App dadurch IMMER als "neuer" erscheinen lassen als den Server,
+    // selbst wenn seit dem letzten echten Speichern nichts geaendert wurde.
+    // Fuer den Vergleich zaehlt nur der Zeitpunkt der letzten echten Aenderung
+    // (das bestehende D.LastModified).
 
     var remoteNewer = remote && remote.LastModified && remote.LastModified > (D.LastModified||0);
     var localNewer = !remote || !remote.LastModified || (D.LastModified||0) > remote.LastModified;
@@ -772,6 +777,9 @@ async function syncPc(){
         alert('Zum Hochladen wird ein GitHub-Token benötigt (Feld oben eintragen).\nOhne Token kann nur vom PC empfangen werden.');
         return;
       }
+      // Aktuellen Stand persistieren (stempelt jetzt bewusst "jetzt", da wir
+      // uns gerade entschieden haben, diesen Stand zu veroeffentlichen).
+      save();
       var content = b64EncodeUtf8(JSON.stringify(D));
       var bodyObj = {message:'Sync von der App', content:content, branch:'main'};
       if(sha) bodyObj.sha = sha;
