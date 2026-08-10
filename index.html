@@ -668,6 +668,12 @@ function playerAdd(){
   save(); renderAll();
 }
 function exportJson(){
+  if(window.AndroidBridge && window.AndroidBridge.saveJson){
+    // In der App: <a download> loest in der WebView keinen echten Download
+    // aus - stattdessen schreibt die native Seite die Datei direkt.
+    window.AndroidBridge.saveJson(JSON.stringify(D));
+    return;
+  }
   var blob=new Blob([JSON.stringify(D)], {type:'application/json'});
   var a=document.createElement('a');
   a.href=URL.createObjectURL(blob);
@@ -1217,10 +1223,17 @@ function appcfgLogoSave(){
   var dataUrl = img.src;
   var mime = (dataUrl.match(/^data:([^;]+);/) || [null,'image/png'])[1];
   var ext = mime.indexOf('png')>=0 ? 'png' : (mime.indexOf('jpeg')>=0 ? 'jpg' : 'png');
+  var filename = 'vereinslogo.' + ext;
+  if(window.AndroidBridge && window.AndroidBridge.saveFile){
+    // In der App: <a download> loest in der WebView keinen echten Download
+    // aus - stattdessen schreibt die native Seite die Datei direkt.
+    window.AndroidBridge.saveFile(dataUrl, filename, mime);
+    return;
+  }
   fetch(dataUrl).then(function(r){ return r.blob(); }).then(function(blob){
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'vereinslogo.' + ext;
+    a.download = filename;
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
   });
 }
