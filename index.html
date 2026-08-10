@@ -274,12 +274,20 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
     <h2>App-Einstellungen</h2>
     <div class="row">
       <div class="grow">App-Logo</div>
+      <button class="btn gray" onclick="appcfgLogoSave()">Speichern</button>
       <button class="btn gray" onclick="document.getElementById('appcfg-logofile').click()">Ändern</button>
     </div>
     <input type="file" id="appcfg-logofile" accept="image/*" class="hidden" onchange="appcfgLogoSelect(this)">
+    <div class="row">
+      <div class="grow">Banner-Farbe</div>
+      <input type="color" id="appcfg-bannercolor" style="width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--input)">
+      <button class="btn gray" onclick="appcfgBannerReset()">Zurücksetzen</button>
+    </div>
     <div class="muted" style="margin:10px 0 6px 0">Kopfzeilen-Text:</div>
     <div class="row"><input class="grow" id="appcfg-clubname" placeholder="Vereinsname (z.B. Löhner Clan)"></div>
     <div class="row"><input class="grow" id="appcfg-season" placeholder="Saison (z.B. Saison 2026/27)"></div>
+    <div class="muted" style="margin:10px 0 6px 0">Kicktipp-Seite (z.B. neue Saison-Runde) – wird mit synchronisiert:</div>
+    <div class="row"><input class="grow" id="appcfg-kicktipp" placeholder="https://www.kicktipp.de/..."></div>
     <div class="muted" style="margin:10px 0 6px 0">Verknüpfte Synchronisierungs-Seite (GitHub):</div>
     <div class="row"><input class="grow" id="appcfg-ghowner" placeholder="GitHub-Benutzername"></div>
     <div class="row"><input class="grow" id="appcfg-ghrepo" placeholder="Repository-Name"></div>
@@ -312,6 +320,8 @@ function load(){
   if(d.ClubName === undefined) d.ClubName = "Löhner Clan";
   if(d.Season === undefined) d.Season = "Saison 2026/27";
   if(d.HeaderLogo === undefined) d.HeaderLogo = "";
+  if(d.BannerColor === undefined) d.BannerColor = "";
+  if(d.KicktippUrl === undefined) d.KicktippUrl = "";
   for(var i=0;i<d.Spieler.length;i++){
     if(d.Spieler[i].KickName === undefined) d.Spieler[i].KickName = "";
     if(!d.Spieler[i].Bezahlt) d.Spieler[i].Bezahlt = [];
@@ -693,7 +703,8 @@ function resetAll(){
 }
 
 /* ---------- Kicktipp-Synchronisation ---------- */
-var KICKTIPP_URL = "https://www.kicktipp.de/loehner-clan/tippuebersicht";
+var DEFAULT_KICKTIPP_URL = "https://www.kicktipp.de/loehner-clan/tippuebersicht";
+function kicktippUrl(){ return (D.KicktippUrl && D.KicktippUrl.trim()) || DEFAULT_KICKTIPP_URL; }
 
 var __httpSeq = 0;
 var __httpCallbacks = {};
@@ -966,7 +977,7 @@ async function syncKicktipp(){
   try{
     var first;
     try{
-      first = await httpGet(KICKTIPP_URL);
+      first = await httpGet(kicktippUrl());
     }catch(e){
       alert('Fehler bei der Verbindung zu Kicktipp:\n' + e.message +
         '\n\nBitte Internetverbindung prüfen und erneut versuchen.');
@@ -983,7 +994,7 @@ async function syncKicktipp(){
       btn.textContent = 'Lade ' + sp + '/' + SPIELTAGE + '...';
       var html;
       try{
-        html = await httpGet(KICKTIPP_URL + '?spieltagIndex=' + sp + saison);
+        html = await httpGet(kicktippUrl() + '?spieltagIndex=' + sp + saison);
       }catch(e){ break; }
       var parsed = parseSpieltagHtml(html);
       var finished = false;
@@ -1112,7 +1123,7 @@ async function syncKicktippPlayers(){
   try{
     var html;
     try{
-      html = await httpGet(KICKTIPP_URL);
+      html = await httpGet(kicktippUrl());
     }catch(e){
       alert('Fehler bei der Verbindung zu Kicktipp:\n' + e.message +
         '\n\nBitte Internetverbindung prüfen und erneut versuchen.');
@@ -1178,9 +1189,12 @@ function logoPressEnd(){
 function openAppCfg(){
   document.getElementById('appcfg-clubname').value = D.ClubName || 'Löhner Clan';
   document.getElementById('appcfg-season').value = D.Season || 'Saison 2026/27';
+  document.getElementById('appcfg-kicktipp').value = D.KicktippUrl || '';
   document.getElementById('appcfg-ghowner').value = GH_OWNER;
   document.getElementById('appcfg-ghrepo').value = GH_REPO;
   document.getElementById('appcfg-ghpath').value = GH_PATH;
+  var bc = document.getElementById('appcfg-bannercolor');
+  bc.value = (D.BannerColor && /^#[0-9a-fA-F]{6}$/.test(D.BannerColor)) ? D.BannerColor : '#0e7a3c';
   document.getElementById('appcfg-overlay').classList.remove('hidden');
 }
 function appcfgClose(){
@@ -1197,6 +1211,22 @@ function appcfgLogoSelect(inp){
   r.readAsDataURL(f);
   inp.value = '';
 }
+// Speichert das aktuell angezeigte Logo als Bilddatei (z.B. bevor man es aendert).
+function appcfgLogoSave(){
+  var img = document.getElementById('logoimg');
+  var dataUrl = img.src;
+  var mime = (dataUrl.match(/^data:([^;]+);/) || [null,'image/png'])[1];
+  var ext = mime.indexOf('png')>=0 ? 'png' : (mime.indexOf('jpeg')>=0 ? 'jpg' : 'png');
+  fetch(dataUrl).then(function(r){ return r.blob(); }).then(function(blob){
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'vereinslogo.' + ext;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  });
+}
+function appcfgBannerReset(){
+  document.getElementById('appcfg-bannercolor').value = '#0e7a3c';
+}
 function applyHeaderText(){
   var sub = document.getElementById('hdr-sub');
   if(sub) sub.textContent = (D.ClubName || 'Löhner Clan') + ' · ' + (D.Season || 'Saison 2026/27');
@@ -1204,10 +1234,23 @@ function applyHeaderText(){
     var img = document.getElementById('logoimg');
     if(img) img.src = D.HeaderLogo;
   }
+  applyBanner();
+}
+function applyBanner(){
+  var hdr = document.querySelector('header');
+  if(!hdr) return;
+  if(D.BannerColor && /^#[0-9a-fA-F]{6}$/.test(D.BannerColor)){
+    hdr.style.background = D.BannerColor;
+  }else{
+    hdr.style.background = '';
+  }
 }
 function appcfgSave(){
   D.ClubName = document.getElementById('appcfg-clubname').value.trim() || 'Löhner Clan';
   D.Season = document.getElementById('appcfg-season').value.trim() || 'Saison 2026/27';
+  D.KicktippUrl = document.getElementById('appcfg-kicktipp').value.trim();
+  var bc = document.getElementById('appcfg-bannercolor').value;
+  D.BannerColor = (bc && bc.toLowerCase() !== '#0e7a3c') ? bc : '';
   save();
   applyHeaderText();
 
