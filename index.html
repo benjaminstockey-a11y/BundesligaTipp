@@ -79,6 +79,18 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
 .modal-box{max-height:82vh;overflow:auto;width:100%;max-width:420px;}
 .btn.sync{background:var(--gold);color:#3a2a00;}
 .btn[disabled]{opacity:.6;}
+#uebertable-logo{position:absolute;inset:0;background-repeat:no-repeat;background-position:center;
+  background-size:120px 120px;opacity:.12;pointer-events:none;}
+#pdf-report{display:none;}
+body.printing header,body.printing main>.card,body.printing nav{display:none!important;}
+body.printing #pdf-report{display:block!important;background:#fff;color:#111;padding:22px;
+  font-family:'Segoe UI',Roboto,Arial,sans-serif;}
+#pdf-report h1{font-size:20px;margin:0 0 4px 0;}
+#pdf-report .sub{color:#555;font-size:13px;margin-bottom:14px;}
+#pdf-report table{width:100%;border-collapse:collapse;margin-bottom:14px;}
+#pdf-report td,#pdf-report th{padding:6px 4px;border-bottom:1px solid #ddd;text-align:left;font-size:13.5px;}
+#pdf-report td.r,#pdf-report th.r{text-align:right;}
+#pdf-report .tot{font-size:16px;font-weight:800;margin:10px 0;}
 </style>
 </head>
 <body>
@@ -92,7 +104,9 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
   <div id="tab-tipps">
     <div class="card">
       <button class="btn block sync" id="btn-sync" onclick="syncKicktipp()">🔄 Mit Kicktipp synchronisieren</button>
-      <div class="muted" style="margin-top:6px">Holt Tipper-Namen und Fehltipps automatisch von kicktipp.de/loehner-clan.</div>
+      <div class="muted" style="margin-top:6px;margin-bottom:8px">Holt Tipper-Namen und Fehltipps automatisch von kicktipp.de/loehner-clan.</div>
+      <button class="btn block gray" id="btn-syncplayers" onclick="syncKicktippPlayers()">Spieler von Kicktipp holen</button>
+      <div class="muted" style="margin-top:6px">Holt nur die Tipper-Namen (schnell, ohne Fehltipps).</div>
     </div>
     <div class="card">
       <h2>Spieltag eintragen</h2>
@@ -141,7 +155,10 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
     </div>
     <div class="card">
       <h2>Spieler</h2>
-      <table id="uebertable"></table>
+      <div id="uebertable-wrap" style="position:relative">
+        <div id="uebertable-logo"></div>
+        <table id="uebertable"></table>
+      </div>
     </div>
     <div class="card">
       <h2>Offene Beträge</h2>
@@ -153,7 +170,7 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
       <button class="btn block gray" onclick="offenAdd()">Hinzufügen</button>
     </div>
     <div class="card">
-      <button class="btn wa" onclick="shareWA()">Übersicht per WhatsApp teilen</button>
+      <button class="btn wa" id="btn-pdf" onclick="shareWA()">Übersicht als PDF → WhatsApp</button>
     </div>
   </div>
 
@@ -165,10 +182,21 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
         <div class="grow">Darkmode</div>
         <span class="switch"><input type="checkbox" id="darkmode" onchange="toggleDark()"><span class="slider"></span></span>
       </div>
+      <div class="row">
+        <div class="grow">Hintergrundfarbe</div>
+        <input type="color" id="bgcolor" onchange="bgColorChange(this)" style="width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--input)">
+        <button class="btn gray" onclick="bgColorReset()">Zurücksetzen</button>
+      </div>
+      <div class="row">
+        <div class="grow">Vereinslogo (Wasserzeichen)</div>
+        <button class="btn gray" onclick="document.getElementById('logofile').click()">Auswählen</button>
+        <button class="x" onclick="logoRemove()">✕</button>
+      </div>
+      <input type="file" id="logofile" accept="image/*" class="hidden" onchange="logoSelect(this)">
     </div>
     <div class="card">
       <h2>Spieler verwalten</h2>
-      <div class="muted" style="margin-bottom:6px">Name und €-Satz pro Fehltipp:</div>
+      <div class="muted" style="margin-bottom:6px">Name, €-Satz pro Fehltipp und Kicktipp-Name:</div>
       <div id="playermgr"></div>
       <button class="btn block gray" onclick="playerAdd()">+ Spieler hinzufügen</button>
     </div>
@@ -211,19 +239,26 @@ body.dark .pill.r{background:#452023;color:#f09a9e;}
   </div>
 </div>
 
+<div id="pdf-report"></div>
+
 <script>
 var SPIELTAGE = 34;
-var DEFAULT_DATA = {"Spieler": [{"Name": "Benjamin", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Martina", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Angelina", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Tim", "Satz": 0.05, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}], "Strafen": [], "Offene": [], "DarkMode": false, "BackColorHex": "Yellow", "LogoPath": "C:\\Users\\Admin\\Downloads\\images.png"};
+var DEFAULT_DATA = {"Spieler": [{"Name": "Benjamin", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Martina", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Angelina", "Satz": 0.2, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}, {"Name": "Tim", "Satz": 0.05, "Tipps": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], "KickName": ""}], "Strafen": [], "Offene": [], "DarkMode": false, "BackColorHex": "", "LogoDataUrl": ""};
 
 var D = load();
 var st = parseInt(localStorage.getItem('bt_st') || '1', 10);
 
 function load(){
+  var d = null;
   try{
     var s = localStorage.getItem('bt_data');
-    if(s){ var d = JSON.parse(s); if(d && d.Spieler) return d; }
+    if(s){ var p = JSON.parse(s); if(p && p.Spieler) d = p; }
   }catch(e){}
-  return JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if(!d) d = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  if(d.BackColorHex === undefined) d.BackColorHex = "";
+  if(d.LogoDataUrl === undefined) d.LogoDataUrl = "";
+  for(var i=0;i<d.Spieler.length;i++){ if(d.Spieler[i].KickName === undefined) d.Spieler[i].KickName = ""; }
+  return d;
 }
 function save(){ localStorage.setItem('bt_data', JSON.stringify(D)); }
 
@@ -327,6 +362,7 @@ function renderUeber(){
     h+='<tr><td>'+esc(sp.Name)+'</td><td class="r">'+fehl(sp)+'</td><td class="r">'+eur(verlust(sp))+'</td></tr>';
   }
   document.getElementById('uebertable').innerHTML=h;
+  applyLogo();
   var o='';
   for(var i=0;i<D.Offene.length;i++){
     o+='<div class="row"><div class="grow">'+esc(D.Offene[i].Name)+'</div>'
@@ -346,7 +382,40 @@ function offenAdd(){
 }
 function offenDel(i){ D.Offene.splice(i,1); save(); renderUeber(); }
 
-function shareWA(){
+function buildPdfReportHtml(){
+  var w=pottWerte();
+  var d=new Date();
+  var datum=('0'+d.getDate()).slice(-2)+'.'+('0'+(d.getMonth()+1)).slice(-2)+'.'+d.getFullYear();
+  var h='<h1>Bundesliga Tipps – Übersicht</h1><div class="sub">Stand: '+datum+'</div>';
+  h+='<table><tr><th>Name</th><th class="r">Fehltipps</th><th class="r">Verlust</th></tr>';
+  for(var p=0;p<D.Spieler.length;p++){
+    var sp=D.Spieler[p];
+    h+='<tr><td>'+esc(sp.Name)+'</td><td class="r">'+fehl(sp)+'</td><td class="r">'+eur(verlust(sp))+'</td></tr>';
+  }
+  h+='</table>';
+  h+='<div class="tot">Pott gesamt: '+eur(w.pott+w.bez)+'</div>';
+  h+='<div class="sub">aus Fehltipps: '+eur(w.pott)+' · Strafen bezahlt: '+eur(w.bez)+' · Strafen offen: '+eur(w.off)+'</div>';
+  var offeneStrafen=[];
+  for(var i=0;i<D.Strafen.length;i++){ if(!D.Strafen[i].Bezahlt) offeneStrafen.push(D.Strafen[i]); }
+  if(offeneStrafen.length){
+    h+='<h2>Offene Strafen</h2><table><tr><th>Spieltag</th><th>Name</th><th class="r">Betrag</th></tr>';
+    for(var k=0;k<offeneStrafen.length;k++){
+      var s=offeneStrafen[k];
+      h+='<tr><td>'+esc(s.Spieltag)+'</td><td>'+esc(s.Name)+'</td><td class="r">'+eur(s.Betrag)+'</td></tr>';
+    }
+    h+='</table>';
+  }
+  if(D.Offene.length){
+    h+='<h2>Offene Beträge</h2><table><tr><th>Name</th><th class="r">Betrag</th></tr>';
+    for(var j=0;j<D.Offene.length;j++){
+      h+='<tr><td>'+esc(D.Offene[j].Name)+'</td><td class="r">'+eur(D.Offene[j].Betrag)+'</td></tr>';
+    }
+    h+='</table>';
+  }
+  return h;
+}
+
+function shareTextFallback(){
   var w=pottWerte();
   var t='*Bundesliga Tipps - Übersicht*\n';
   var d=new Date();
@@ -357,18 +426,26 @@ function shareWA(){
     t+=sp.Name+': '+fehl(sp)+' Fehltipps = '+eur(verlust(sp))+'\n';
   }
   t+='\n*Pott gesamt: '+eur(w.pott+w.bez)+'*\n';
-  if(w.off>0){
-    t+='\n*Offene Strafen:*\n';
-    for(var i=0;i<D.Strafen.length;i++){
-      var s=D.Strafen[i];
-      if(!s.Bezahlt) t+='Spieltag '+s.Spieltag+' '+s.Name+': '+eur(s.Betrag)+'\n';
-    }
-  }
-  if(D.Offene.length){
-    t+='\n*Offene Beträge:*\n';
-    for(var j=0;j<D.Offene.length;j++) t+=D.Offene[j].Name+': '+eur(D.Offene[j].Betrag)+'\n';
-  }
   window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank');
+}
+
+// Erstellt die Uebersicht als PDF (wie am PC) und oeffnet WhatsApp zum Versenden.
+window.__pdfDone = function(ok, msg){
+  var btn = document.getElementById('btn-pdf');
+  document.body.classList.remove('printing');
+  if(btn){ btn.disabled = false; btn.textContent = 'Übersicht als PDF → WhatsApp'; }
+  if(!ok && msg) alert('PDF konnte nicht erstellt werden:\n' + msg);
+};
+function shareWA(){
+  if(!(window.AndroidBridge && window.AndroidBridge.exportPdf)){
+    shareTextFallback();
+    return;
+  }
+  document.getElementById('pdf-report').innerHTML = buildPdfReportHtml();
+  document.body.classList.add('printing');
+  var btn = document.getElementById('btn-pdf');
+  if(btn){ btn.disabled = true; btn.textContent = 'Erstelle PDF...'; }
+  setTimeout(function(){ window.AndroidBridge.exportPdf(); }, 60);
 }
 
 /* ---------- Mehr ---------- */
@@ -377,18 +454,52 @@ function toggleDark(){
   document.body.classList.toggle('dark', D.DarkMode);
   save();
 }
+function applyBg(){
+  var el = document.getElementById('bgcolor');
+  if(D.BackColorHex && /^#[0-9a-fA-F]{6}$/.test(D.BackColorHex)){
+    document.documentElement.style.setProperty('--bg', D.BackColorHex);
+    if(el) el.value = D.BackColorHex;
+  }else{
+    document.documentElement.style.removeProperty('--bg');
+    if(el) el.value = '#eef1ef';
+  }
+}
+function bgColorChange(el){ D.BackColorHex = el.value; save(); applyBg(); }
+function bgColorReset(){ D.BackColorHex = ''; save(); applyBg(); }
+
+function logoSelect(inp){
+  var f = inp.files[0]; if(!f) return;
+  var r = new FileReader();
+  r.onload = function(){
+    D.LogoDataUrl = String(r.result);
+    save();
+    renderUeber();
+  };
+  r.readAsDataURL(f);
+  inp.value = '';
+}
+function logoRemove(){ D.LogoDataUrl = ''; save(); renderUeber(); }
+function applyLogo(){
+  var el = document.getElementById('uebertable-logo');
+  if(!el) return;
+  el.style.backgroundImage = D.LogoDataUrl ? 'url(' + D.LogoDataUrl + ')' : 'none';
+}
+
 function renderMgr(){
   var h='';
   for(var p=0;p<D.Spieler.length;p++){
     h+='<div class="row"><input class="grow" value="'+esc(D.Spieler[p].Name)+'" onchange="pName('+p+',this)">'
       +'<input class="num" value="'+String(D.Spieler[p].Satz).replace('.',',')+'" inputmode="decimal" onchange="pSatz('+p+',this)"> €'
-      +'<button class="x" onclick="pDel('+p+')">✕</button></div>';
+      +'<button class="x" onclick="pDel('+p+')">✕</button></div>'
+      +'<div class="row" style="padding-top:0"><input class="grow small" placeholder="Kicktipp-Name (optional)" value="'+esc(D.Spieler[p].KickName||'')+'" onchange="pKick('+p+',this)"></div>';
   }
   document.getElementById('playermgr').innerHTML=h;
   document.getElementById('darkmode').checked=!!D.DarkMode;
+  applyBg();
 }
 function pName(i,el){ D.Spieler[i].Name=el.value.trim()||('Spieler '+(i+1)); save(); renderAll(); }
 function pSatz(i,el){ D.Spieler[i].Satz=parseNum(el.value); save(); renderAll(); }
+function pKick(i,el){ D.Spieler[i].KickName=el.value.trim(); save(); }
 function pDel(i){
   if(!confirm('Spieler "'+D.Spieler[i].Name+'" wirklich entfernen?')) return;
   D.Spieler.splice(i,1); save(); renderAll();
@@ -723,6 +834,69 @@ async function syncKicktipp(){
       fertigMsg = spieltageMitDaten + ' Spieltag(e) mit Ergebnissen, ' + updated + ' Spieler aktualisiert.' + keineTippsText;
     }
     alert('Synchronisierung abgeschlossen:\n' + fertigMsg);
+  }catch(e){
+    alert('Fehler bei der Synchronisierung:\n' + (e && e.message ? e.message : e));
+  }finally{
+    btn.disabled = false;
+    btn.textContent = oldText;
+  }
+}
+
+// Holt nur die Tipper-Namen von Kicktipp (eine Abfrage, Fehltipps bleiben unberuehrt).
+async function syncKicktippPlayers(){
+  var btn = document.getElementById('btn-syncplayers');
+  var oldText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Lade Spieler...';
+  try{
+    var html;
+    try{
+      html = await httpGet(KICKTIPP_URL);
+    }catch(e){
+      alert('Fehler bei der Verbindung zu Kicktipp:\n' + e.message +
+        '\n\nBitte Internetverbindung prüfen und erneut versuchen.');
+      return;
+    }
+    var parsed = parseSpieltagHtml(html);
+    var wrong = parsed.wrong;
+    if(Object.keys(wrong).length === 0){
+      alert('Es wurden keine Tipper auf der Kicktipp-Seite gefunden.');
+      return;
+    }
+
+    var matched = {};
+    var playerNames = D.Spieler.map(function(p){ return p.Name; });
+    for(var i = 0; i < D.Spieler.length; i++){
+      var kick0 = D.Spieler[i].KickName || D.Spieler[i].Name;
+      if(kick0 in wrong) matched[kick0] = true;
+    }
+    var unmatched = [];
+    for(var k in wrong){ if(!matched[k]) unmatched.push(k); }
+
+    if(unmatched.length === 0){
+      alert('Alle ' + Object.keys(wrong).length + ' Kicktipp-Tipper sind bereits zugeordnet:\n\n' + Object.keys(wrong).join(', '));
+      return;
+    }
+
+    var assign = await showMappingModal(unmatched, playerNames);
+    if(assign === null) return;
+
+    var zugeordnet = 0, neu = 0;
+    for(var kk in assign){
+      var v = assign[kk];
+      if(v === '-1' || v === 'new') continue;
+      var idx = parseInt(v, 10);
+      if(idx >= 0 && idx < D.Spieler.length){ D.Spieler[idx].KickName = kk; zugeordnet++; }
+    }
+    for(var kk2 in assign){
+      if(assign[kk2] !== 'new') continue;
+      var t = []; for(var i2 = 0; i2 < SPIELTAGE; i2++) t.push(0);
+      D.Spieler.push({Name:kk2, Satz:0.2, Tipps:t, KickName:kk2});
+      neu++;
+    }
+    save();
+    renderAll();
+    alert('Spieler-Synchronisierung abgeschlossen:\n' + zugeordnet + ' Tipper zugeordnet, ' + neu + ' neue Spieler angelegt.');
   }catch(e){
     alert('Fehler bei der Synchronisierung:\n' + (e && e.message ? e.message : e));
   }finally{
