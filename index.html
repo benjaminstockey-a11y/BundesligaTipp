@@ -734,11 +734,14 @@ async function syncPc(){
     var res = await httpReq('GET', GH_CONTENTS_URL + '?ref=main', headers, null);
     var remote = null, sha = null;
     if(res.status === 200){
-      var shaMatch = res.body.match(/"sha"\s*:\s*"([a-f0-9]+)"/);
-      sha = shaMatch ? shaMatch[1] : null;
-      var contentMatch = res.body.match(/"content"\s*:\s*"([\s\S]*?)"\s*[,}]/);
-      if(contentMatch){
-        try{ remote = JSON.parse(b64DecodeUtf8(contentMatch[1])); }catch(e){}
+      // Echtes JSON.parse statt Regex: JSON.parse loest \n innerhalb von Strings
+      // korrekt zu echten Zeilenumbruechen auf, die dann sauber entfernt werden
+      // koennen, bevor der Base64-Inhalt dekodiert wird.
+      var apiObj = JSON.parse(res.body);
+      sha = apiObj.sha || null;
+      if(apiObj.content){
+        try{ remote = JSON.parse(b64DecodeUtf8(apiObj.content)); }
+        catch(e){ throw new Error('Antwort vom Server konnte nicht gelesen werden: ' + e.message); }
       }
     }else if(res.status !== 404){
       throw new Error('Server antwortete mit ' + res.status);
