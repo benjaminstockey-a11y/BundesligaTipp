@@ -161,6 +161,15 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       </div>
     </div>
     <div class="card">
+      <h2>Verlust pro Spieltag</h2>
+      <div class="stnav">
+        <button onclick="ueStPrev()">‹</button>
+        <select id="ue-stsel" onchange="ueStChange()"></select>
+        <button onclick="ueStNext()">›</button>
+      </div>
+      <table id="ue-sttable"></table>
+    </div>
+    <div class="card">
       <h2>Offene Beträge</h2>
       <div id="offenlist"></div>
       <div class="row">
@@ -247,6 +256,7 @@ var DEFAULT_DATA = {"Spieler": [{"Name": "Benjamin", "Satz": 0.2, "Tipps": [0, 0
 
 var D = load();
 var st = parseInt(localStorage.getItem('bt_st') || '1', 10);
+var ue_st = parseInt(localStorage.getItem('bt_ue_st') || String(st), 10);
 
 function load(){
   var d = null;
@@ -364,6 +374,7 @@ function renderUeber(){
   }
   document.getElementById('uebertable').innerHTML=h;
   applyLogo();
+  renderUeSt();
   var o='';
   for(var i=0;i<D.Offene.length;i++){
     o+='<div class="row"><div class="grow">'+esc(D.Offene[i].Name)+'</div>'
@@ -387,6 +398,26 @@ function offenAdd(){
   renderUeber();
 }
 function offenDel(i){ D.Offene.splice(i,1); save(); renderUeber(); }
+
+/* ---------- Verlust pro Spieltag (Uebersicht) ---------- */
+function ueStChange(){ ue_st=parseInt(document.getElementById('ue-stsel').value,10); localStorage.setItem('bt_ue_st', ue_st); renderUeSt(); }
+function ueStPrev(){ if(ue_st>1){ ue_st--; localStorage.setItem('bt_ue_st', ue_st); renderUeSt(); } }
+function ueStNext(){ if(ue_st<SPIELTAGE){ ue_st++; localStorage.setItem('bt_ue_st', ue_st); renderUeSt(); } }
+function renderUeSt(){
+  var sel=document.getElementById('ue-stsel'); if(!sel) return;
+  sel.innerHTML='';
+  for(var i=1;i<=SPIELTAGE;i++){
+    var o=document.createElement('option'); o.value=i; o.text=i+'. Spieltag'; if(i===ue_st) o.selected=true; sel.add(o);
+  }
+  var h='<tr><th>Name</th><th class="r">Fehltipps</th><th class="r">Verlust</th></tr>';
+  for(var p=0;p<D.Spieler.length;p++){
+    var sp=D.Spieler[p];
+    var f=sp.Tipps[ue_st-1]||0;
+    h+='<tr><td>'+esc(sp.Name)+'</td><td class="r">'+f+'</td><td class="r">'+eur(f*sp.Satz)+'</td></tr>';
+  }
+  if(!D.Spieler.length) h+='<tr><td colspan="3" class="muted">Keine Spieler vorhanden.</td></tr>';
+  document.getElementById('ue-sttable').innerHTML=h;
+}
 
 function buildPdfReportHtml(){
   var w=pottWerte();
