@@ -294,7 +294,7 @@ function renderTipps(){
   var h='';
   for(var p=0;p<D.Spieler.length;p++){
     var sp=D.Spieler[p];
-    h+='<div class="row"><div class="grow">'+esc(sp.Name)+'</div>'
+    h+='<div class="row"><input class="grow" value="'+esc(sp.Name)+'" onchange="pName('+p+',this)">'
       +'<input class="num" inputmode="numeric" value="'+(sp.Tipps[st-1]||0)+'" onchange="tippInput('+p+',this)">'
       +'<div class="muted" style="width:66px" class="right">'+eur((sp.Tipps[st-1]||0)*sp.Satz)+'</div>'
       +'<button class="x" onclick="pDel('+p+')" title="Spieler löschen">✕</button></div>';
@@ -446,7 +446,13 @@ function shareWA(){
   document.body.classList.add('printing');
   var btn = document.getElementById('btn-pdf');
   if(btn){ btn.disabled = true; btn.textContent = 'Erstelle PDF...'; }
-  setTimeout(function(){ window.AndroidBridge.exportPdf(); }, 60);
+  // Zwei Frames abwarten, damit der Browser das Layout wirklich fertig
+  // gezeichnet hat, bevor die native Seite es als PDF exportiert.
+  requestAnimationFrame(function(){
+    requestAnimationFrame(function(){
+      setTimeout(function(){ window.AndroidBridge.exportPdf(); }, 150);
+    });
+  });
 }
 
 /* ---------- Mehr ---------- */
