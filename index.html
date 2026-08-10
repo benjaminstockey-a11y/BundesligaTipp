@@ -179,13 +179,14 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <div id="ob-auto"></div>
     </div>
     <div class="card">
-      <h2>Weitere Beträge</h2>
+      <h2>Weitere Beträge (gesamt offen)</h2>
+      <div class="muted" style="margin-bottom:6px">Automatisch: alle offenen Fehltipp-Verluste + offenen Strafen pro Spieler zusammengezählt.</div>
       <div id="offenlist"></div>
-      <div class="row">
+      <div class="row" style="margin-top:6px">
         <select id="o-name" class="grow"></select>
         <input class="small" id="o-betrag" placeholder="0,00" inputmode="decimal"> €
       </div>
-      <button class="btn block gray" onclick="offenAdd()">Hinzufügen</button>
+      <button class="btn block gray" onclick="offenAdd()">Sonstigen Betrag hinzufügen</button>
     </div>
     <div class="card">
       <button class="btn wa" id="btn-pdf" onclick="shareWA()">Übersicht als PDF → WhatsApp</button>
@@ -397,11 +398,29 @@ function renderUeber(){
   }
   if(!st2) st2='<div class="muted">Noch keine Strafgebühren.</div>';
   document.getElementById('ue-strafen').innerHTML=st2;
+  // Gesamt offen pro Spieler: unbezahlte Fehltipp-Verluste + unbezahlte Strafen + sonstige Betraege
+  var namen=[], summen={};
+  for(var p3=0;p3<D.Spieler.length;p3++){
+    var sp3=D.Spieler[p3], sum3=0;
+    for(var d=0;d<SPIELTAGE;d++){ if(!(sp3.Bezahlt&&sp3.Bezahlt[d])) sum3+=(sp3.Tipps[d]||0)*sp3.Satz; }
+    namen.push(sp3.Name); summen[sp3.Name]=(summen[sp3.Name]||0)+sum3;
+  }
+  for(var i3=0;i3<D.Strafen.length;i3++){
+    var s3=D.Strafen[i3];
+    if(s3.Bezahlt) continue;
+    if(!(s3.Name in summen)) namen.push(s3.Name);
+    summen[s3.Name]=(summen[s3.Name]||0)+s3.Betrag;
+  }
+  for(var i4=0;i4<D.Offene.length;i4++){
+    var of4=D.Offene[i4];
+    if(!(of4.Name in summen)) namen.push(of4.Name);
+    summen[of4.Name]=(summen[of4.Name]||0)+of4.Betrag;
+  }
   var o='';
-  for(var i=0;i<D.Offene.length;i++){
-    o+='<div class="row"><div class="grow">'+esc(D.Offene[i].Name)+'</div>'
-      +'<div>'+eur(D.Offene[i].Betrag)+'</div>'
-      +'<button class="x" onclick="offenDel('+i+')">✕</button></div>';
+  for(var n5=0;n5<namen.length;n5++){
+    var nm=namen[n5], bet=summen[nm];
+    if(!bet) continue;
+    o+='<div class="row"><div class="grow">'+esc(nm)+'</div><div><b>'+eur(bet)+'</b></div></div>';
   }
   if(!o) o='<div class="muted">Keine offenen Beträge.</div>';
   document.getElementById('offenlist').innerHTML=o;
