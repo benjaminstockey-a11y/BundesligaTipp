@@ -224,10 +224,17 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
     <div class="card">
       <h2>Daten &amp; PC-Programm</h2>
       <div class="muted" style="margin-bottom:8px">
-        Die Datei ist mit dem PC-Programm kompatibel: Exportiere hier „tippdaten.json"
-        und lege sie in den Programmordner am PC – oder umgekehrt.
+        Automatischer Abgleich mit dem PC-Programm über das Internet – ohne Datei
+        hin- und herzuschicken. Der neuere Stand (App oder PC) gewinnt.
       </div>
-      <button class="btn block" onclick="exportJson()">Daten exportieren (tippdaten.json)</button>
+      <button class="btn block sync" id="btn-pcsync" onclick="syncPc()">🔄 Mit PC-Programm synchronisieren</button>
+      <div class="row" style="margin-top:10px">
+        <input class="grow" type="password" id="gh-token" placeholder="GitHub-Token (nur zum Senden nötig)" onchange="ghTokenChange(this)">
+      </div>
+      <div class="muted" style="margin:10px 0 8px 0">
+        Alternativ manuell: Datei „tippdaten.json" exportieren/importieren.
+      </div>
+      <button class="btn block gray" onclick="exportJson()">Daten exportieren (tippdaten.json)</button>
       <button class="btn block gray" onclick="document.getElementById('impfile').click()">Daten importieren</button>
       <input type="file" id="impfile" accept=".json,application/json" class="hidden" onchange="importJson(this)">
       <button class="btn block red" onclick="resetAll()">Alles zurücksetzen</button>
@@ -279,6 +286,7 @@ function load(){
   if(!d) d = JSON.parse(JSON.stringify(DEFAULT_DATA));
   if(d.BackColorHex === undefined) d.BackColorHex = "";
   if(d.LogoDataUrl === undefined) d.LogoDataUrl = "";
+  if(d.LastModified === undefined) d.LastModified = 0;
   for(var i=0;i<d.Spieler.length;i++){
     if(d.Spieler[i].KickName === undefined) d.Spieler[i].KickName = "";
     if(!d.Spieler[i].Bezahlt) d.Spieler[i].Bezahlt = [];
@@ -286,7 +294,7 @@ function load(){
   }
   return d;
 }
-function save(){ localStorage.setItem('bt_data', JSON.stringify(D)); }
+function save(){ D.LastModified=Date.now(); localStorage.setItem('bt_data', JSON.stringify(D)); }
 
 function eur(v){ return v.toFixed(2).replace('.', ',') + ' €'; }
 function parseNum(s){ var v = parseFloat(String(s).replace(',', '.')); return isNaN(v) ? 0 : v; }
@@ -608,6 +616,8 @@ function renderMgr(){
   document.getElementById('playermgr').innerHTML=h;
   document.getElementById('darkmode').checked=!!D.DarkMode;
   applyBg();
+  var ghEl=document.getElementById('gh-token');
+  if(ghEl && document.activeElement!==ghEl) ghEl.value=localStorage.getItem('bt_ghtoken')||'';
 }
 function pName(i,el){ D.Spieler[i].Name=el.value.trim()||('Spieler '+(i+1)); save(); renderAll(); }
 function pSatz(i,el){ D.Spieler[i].Satz=parseNum(el.value); save(); renderAll(); }
@@ -678,6 +688,104 @@ function httpGet(url){
     __httpCallbacks[id] = function(ok, data){ ok ? resolve(data) : reject(new Error(data)); };
     window.AndroidBridge.httpGet(url, id);
   });
+}
+
+/* ---------- Synchronisierung mit dem PC-Programm (ueber GitHub) ---------- */
+var GH_OWNER = "benjaminstockey-a11y";
+var GH_REPO = "BundesligaTipp";
+var GH_PATH = "tippdaten.json";
+var GH_CONTENTS_URL = "https://api.github.com/repos/" + GH_OWNER + "/" + GH_REPO + "/contents/" + GH_PATH;
+
+var __httpReqSeq = 0;
+var __httpReqCallbacks = {};
+window.__httpReqResult = function(reqId, status, data){
+  var cb = __httpReqCallbacks[reqId];
+  delete __httpReqCallbacks[reqId];
+  if(cb) cb(status, data);
+};
+// method, url, headers ("Key: Value\n..."), body -> Promise<{status, body}>
+function httpReq(method, url, headers, body){
+  return new Promise(function(resolve, reject){
+    if(!(window.AndroidBridge && window.AndroidBridge.httpRequest)){
+      reject(new Error('Synchronisierung ist nur in der installierten App verfügbar.'));
+      return;
+    }
+    var id = 'q' + (++__httpReqSeq);
+    __httpReqCallbacks[id] = function(status, data){
+      if(status < 0) reject(new Error(data));
+      else resolve({status:status, body:data});
+    };
+    window.AndroidBridge.httpRequest(method, url, headers || '', body === undefined ? null : body, id);
+  });
+}
+function ghTokenChange(el){ localStorage.setItem('bt_ghtoken', el.value.trim()); }
+function b64EncodeUtf8(s){ return btoa(unescape(encodeURIComponent(s))); }
+function b64DecodeUtf8(s){ return decodeURIComponent(escape(atob(s.replace(/\n/g,'').replace(/\r/g,'')))); }
+
+async function syncPc(){
+  var btn = document.getElementById('btn-pcsync');
+  var oldText = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Synchronisiere...';
+  try{
+    var token = localStorage.getItem('bt_ghtoken') || '';
+    var headers = 'Accept: application/vnd.github+json\n';
+    if(token) headers += 'Authorization: token ' + token + '\n';
+
+    var res = await httpReq('GET', GH_CONTENTS_URL + '?ref=main', headers, null);
+    var remote = null, sha = null;
+    if(res.status === 200){
+      var shaMatch = res.body.match(/"sha"\s*:\s*"([a-f0-9]+)"/);
+      sha = shaMatch ? shaMatch[1] : null;
+      var contentMatch = res.body.match(/"content"\s*:\s*"([\s\S]*?)"\s*[,}]/);
+      if(contentMatch){
+        try{ remote = JSON.parse(b64DecodeUtf8(contentMatch[1])); }catch(e){}
+      }
+    }else if(res.status !== 404){
+      throw new Error('Server antwortete mit ' + res.status);
+    }
+
+    save(); // aktuellen Stand + LastModified sichern
+
+    var remoteNewer = remote && remote.LastModified && remote.LastModified > (D.LastModified||0);
+    var localNewer = !remote || !remote.LastModified || (D.LastModified||0) > remote.LastModified;
+
+    if(remoteNewer){
+      D = remote;
+      if(D.BackColorHex===undefined) D.BackColorHex='';
+      if(D.LogoDataUrl===undefined) D.LogoDataUrl='';
+      if(!D.Strafen) D.Strafen=[];
+      if(!D.Offene) D.Offene=[];
+      for(var i=0;i<D.Spieler.length;i++){
+        if(D.Spieler[i].KickName===undefined) D.Spieler[i].KickName='';
+        if(!D.Spieler[i].Bezahlt) D.Spieler[i].Bezahlt=newBoolArr();
+        while(D.Spieler[i].Bezahlt.length<SPIELTAGE) D.Spieler[i].Bezahlt.push(false);
+      }
+      localStorage.setItem('bt_data', JSON.stringify(D));
+      document.body.classList.toggle('dark', !!D.DarkMode);
+      renderAll();
+      alert('Daten vom PC-Programm übernommen (Stand war neuer).');
+    }else if(localNewer){
+      if(!token){
+        alert('Zum Hochladen wird ein GitHub-Token benötigt (Feld oben eintragen).\nOhne Token kann nur vom PC empfangen werden.');
+        return;
+      }
+      var content = b64EncodeUtf8(JSON.stringify(D));
+      var bodyObj = {message:'Sync von der App', content:content, branch:'main'};
+      if(sha) bodyObj.sha = sha;
+      var putHeaders = 'Accept: application/vnd.github+json\nAuthorization: token ' + token + '\nContent-Type: application/json\n';
+      var putRes = await httpReq('PUT', GH_CONTENTS_URL, putHeaders, JSON.stringify(bodyObj));
+      if(putRes.status !== 200 && putRes.status !== 201){
+        throw new Error('Hochladen fehlgeschlagen (' + putRes.status + ')');
+      }
+      alert('Daten erfolgreich mit dem PC-Programm synchronisiert.');
+    }else{
+      alert('Bereits auf dem gleichen Stand.');
+    }
+  }catch(e){
+    alert('Synchronisierung fehlgeschlagen:\n' + (e && e.message ? e.message : e));
+  }finally{
+    btn.disabled = false; btn.textContent = oldText;
+  }
 }
 
 function stripTags(html){
