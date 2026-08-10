@@ -182,7 +182,9 @@ body.printing #pdf-report{display:block!important;background:#fff;color:#111;pad
       <h2>Weitere Beträge (gesamt offen)</h2>
       <div class="muted" style="margin-bottom:6px">Automatisch: alle offenen Fehltipp-Verluste + offenen Strafen pro Spieler zusammengezählt.</div>
       <div id="offenlist"></div>
-      <div class="row" style="margin-top:6px">
+      <div class="muted" style="margin:10px 0 6px 0">Sonstige Beträge:</div>
+      <div id="sonstigelist"></div>
+      <div class="row">
         <select id="o-name" class="grow"></select>
         <input class="small" id="o-betrag" placeholder="0,00" inputmode="decimal"> €
       </div>
@@ -424,6 +426,14 @@ function renderUeber(){
   }
   if(!o) o='<div class="muted">Keine offenen Beträge.</div>';
   document.getElementById('offenlist').innerHTML=o;
+  var so='';
+  for(var i5=0;i5<D.Offene.length;i5++){
+    so+='<div class="row"><div class="grow">'+esc(D.Offene[i5].Name)+'</div>'
+      +'<div>'+eur(D.Offene[i5].Betrag)+'</div>'
+      +'<button class="x" onclick="offenDel('+i5+')">✕</button></div>';
+  }
+  if(!so) so='<div class="muted">Keine sonstigen Beträge.</div>';
+  document.getElementById('sonstigelist').innerHTML=so;
   var oSel=document.getElementById('o-name'); oSel.innerHTML='';
   for(var p2=0;p2<D.Spieler.length;p2++){
     var opt=document.createElement('option'); opt.value=D.Spieler[p2].Name; opt.text=D.Spieler[p2].Name; oSel.add(opt);
